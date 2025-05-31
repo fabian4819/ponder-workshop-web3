@@ -1,5 +1,5 @@
 import { ponder } from "ponder:registry";
-import { transfer } from "ponder:schema";
+import { token, holder, transfer } from "ponder:schema";
 
 ponder.on("ERC20:Transfer", async ({ event, context }) => {
   // Transfer (index_topic_1 address from, index_topic_2 address to, uint256 value)
@@ -17,4 +17,30 @@ ponder.on("ERC20:Transfer", async ({ event, context }) => {
     blocknumber: number,
     txHash: hash,
   });
+
+  // balance[from] -= value;
+  await context.db
+    .insert(holder)
+    .values({
+      id: from,
+      address: from,
+      balance: -value,
+    })
+    .onConflictDoUpdate((row) => ({
+      balance: row.balance - value,
+    }));
+
+  // balance[to] += value;
+  await context.db
+    .insert(holder)
+    .values({
+      id: to,
+      address: to,
+      balance: value,
+    })
+    .onConflictDoUpdate((row) => ({
+      balance: row.balance + value,
+    }));
+
+    
 });
